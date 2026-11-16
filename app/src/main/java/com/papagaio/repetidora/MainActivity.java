@@ -84,21 +84,21 @@ public class MainActivity extends AppCompatActivity {
 
                 if (amplitude > threshold) {
                     tvVoxTriggerIndicator.setText("● DISPARANDO VOX");
-                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#EF4444")); // Vermelho
+                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#DC2626")); // Vermelho
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#EF4444")));
+                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#DC2626")));
                     }
                 } else if (pct > 50) {
                     tvVoxTriggerIndicator.setText("● ESCUTA (RX)");
-                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#F59E0B")); // Âmbar
+                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#D97706")); // Âmbar
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#F59E0B")));
+                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#D97706")));
                     }
                 } else {
                     tvVoxTriggerIndicator.setText("● ESCUTA (RX)");
-                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#10B981")); // Verde
+                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#16A34A")); // Verde
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#10B981")));
+                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#16A34A")));
                     }
                 }
 
@@ -287,10 +287,10 @@ public class MainActivity extends AppCompatActivity {
         tvStatus.setText("Parado");
         progressBargraph.setProgress(0);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#10B981")));
+            progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#16A34A")));
         }
         tvVoxTriggerIndicator.setText("● AGUARDANDO");
-        tvVoxTriggerIndicator.setTextColor(Color.parseColor("#94A3B8"));
+        tvVoxTriggerIndicator.setTextColor(Color.parseColor("#6B7280"));
         updateBargraphThresholdLabel();
     }
 
