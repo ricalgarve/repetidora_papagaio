@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Áudio e microfone -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
+    <!-- Serviço em background (tela bloqueada) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+
+    <!-- Manter CPU ativa com tela desligada -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+
+    <!-- Acesso a áudios -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+
+    <!-- Notificações (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Gravações internas (não precisa de permissão no Android 10+) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RepetidoraPapagaio">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:parentActivityName=".MainActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".HistoryActivity"
+            android:parentActivityName=".MainActivity"
+            android:exported="false"/>
+
+        <!-- foregroundServiceType="microphone" obrigatório no Android 14+ -->
+        <service
+            android:name=".RepetidoraService"
+            android:foregroundServiceType="microphone"
+            android:exported="false"/>
+
+    </application>
+
+</manifest>

@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Logo Dust Coyotes -->
+        <ImageView
+            android:id="@+id/img_logo"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/logo"
+            android:contentDescription="Dust Coyotes Logo"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Título -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Repetidora Papagaio"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="@color/primary"
+            android:paddingBottom="12dp"/>
+
+        <!-- Card: Status do Serviço -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ESTADO DA REPETIDORA"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.1"
+                    android:textColor="@color/text_secondary"/>
+
+                <TextView
+                    android:id="@+id/tv_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Parado"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:paddingTop="4dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Card: Monitor de Som (VOX) -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎙  Recepção &amp; Retransmissão (Papagaio)"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Grava ao detectar áudio e retransmite ao detectar silêncio"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:paddingTop="2dp"/>
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_monitor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Card: Transmissão Periódica -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📢  Transmissão Periódica (Beacon / QRA)"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Toca identificador ou mensagem em intervalo programado"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_secondary"
+                            android:paddingTop="2dp"/>
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/switch_periodic"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/tv_audio_file"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Nenhum áudio selecionado"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:paddingBottom="8dp"
+                    android:ellipsize="middle"
+                    android:singleLine="true"/>
+
+                <Button
+                    android:id="@+id/btn_pick_audio"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:text="📂  Escolher Áudio Periódico"
+                    android:textSize="12sp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Card: Volume de Saída do Rádio (Acionamento VOX) -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🔊  Volume de Saída (Acionar VOX)"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+
+                    <TextView
+                        android:id="@+id/tv_volume_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100%"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary"/>
+                </LinearLayout>
+
+                <SeekBar
+                    android:id="@+id/seek_app_volume"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:progressTint="@color/primary"
+                    android:thumbTint="@color/primary"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Botões de Ação -->
+        <Button
+            android:id="@+id/btn_start_stop"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="▶  Iniciar Serviço"
+            android:textSize="15sp"
+            android:layout_marginBottom="8dp"
+            style="@style/Widget.MaterialComponents.Button"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btn_history"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="📜  Histórico"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+
+            <Button
+                android:id="@+id/btn_settings"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="⚙  Ajustes"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+        </LinearLayout>
+
+        <!-- RODAPÉ: BARGRAPH / VU METER DE ENTRADA DE ÁUDIO -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#0F172A">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📊 VU METER (MIC / RX)"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.08"
+                        android:textColor="#38BDF8"/>
+
+                    <TextView
+                        android:id="@+id/tv_vox_trigger_indicator"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="● AGUARDANDO"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="#94A3B8"/>
+                </LinearLayout>
+
+                <!-- Barra Bargraph Estilizada -->
+                <ProgressBar
+                    android:id="@+id/progress_bargraph"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="20dp"
+                    android:layout_marginTop="8dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressDrawable="@drawable/bargraph_progress"/>
+
+                <!-- Régua de escala dB / VOX -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="3dp">
+                    <TextView android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="0%" android:textSize="10sp"
+                        android:textColor="#64748B"/>
+                    <TextView android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="▲ LIMIAR VOX" android:textSize="10sp"
+                        android:gravity="center"
+                        android:textColor="#F59E0B"
+                        android:id="@+id/tv_threshold_marker"/>
+                    <TextView android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="100%" android:textSize="10sp"
+                        android:textColor="#64748B"
+                        android:gravity="end"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_bargraph_details"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Sinal: 0% | Limiar VOX: 40%"
+                    android:textSize="11sp"
+                    android:textColor="#CBD5E1"
+                    android:paddingTop="4dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</ScrollView>

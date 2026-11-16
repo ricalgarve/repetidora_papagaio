@@ -1,0 +1,139 @@
+package com.papagaio.repetidora;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+/**
+ * Gerencia todas as configurações do app via SharedPreferences.
+ */
+public class SettingsManager {
+
+    private static final String PREF_NAME = "RepetidoraPrefs";
+
+    // Chaves
+    public static final String KEY_SENSITIVITY       = "sensitivity";
+    public static final String KEY_RECORD_DURATION   = "record_duration";
+    public static final String KEY_PERIODIC_URI      = "periodic_uri";
+    public static final String KEY_PERIODIC_INTERVAL = "periodic_interval";
+    public static final String KEY_PERIODIC_ENABLED  = "periodic_enabled";
+    public static final String KEY_MONITOR_ENABLED   = "monitor_enabled";
+    public static final String KEY_SERVICE_RUNNING   = "service_running";
+    public static final String KEY_PURGE_DAYS         = "purge_days";
+    public static final String KEY_SILENCE_TIMEOUT_MS = "silence_timeout_ms";
+    public static final String KEY_NORMALIZE_AUDIO    = "normalize_audio";
+    public static final String KEY_OUTPUT_BOOST       = "output_boost";
+
+    // Valores padrão
+    public static final int DEFAULT_SENSITIVITY          = 40;   // 0–100 %
+    public static final int DEFAULT_RECORD_DURATION      = 30;   // segundos máximos de segurança
+    public static final int DEFAULT_PERIODIC_INTERVAL    = 10;   // minutos
+    public static final int DEFAULT_PURGE_DAYS           = 2;    // expurgo a cada 2 dias por padrão
+    public static final int DEFAULT_SILENCE_TIMEOUT_MS   = 800;  // ms de silêncio para cortar e retransmitir
+    public static final boolean DEFAULT_NORMALIZE_AUDIO  = true; // normalização de pico ativada
+    public static final int DEFAULT_OUTPUT_BOOST         = 120;  // 120% de ganho para acionar VOX do rádio
+
+    private final SharedPreferences prefs;
+
+    public SettingsManager(Context context) {
+        prefs = context.getApplicationContext()
+                       .getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+    }
+
+    // ── Sensibilidade (0–100) ────────────────────────────────────────────────
+    public int getSensitivity() {
+        return prefs.getInt(KEY_SENSITIVITY, DEFAULT_SENSITIVITY);
+    }
+    public void setSensitivity(int value) {
+        prefs.edit().putInt(KEY_SENSITIVITY, value).apply();
+    }
+
+    /**
+     * Converte sensibilidade (0–100 %) em threshold de amplitude (0–32768).
+     * Sensibilidade alta → threshold baixo (aciona com sons fracos).
+     * Sensibilidade baixa → threshold alto (precisa de sons fortes).
+     */
+    public int getAmplitudeThreshold() {
+        int s = getSensitivity();
+        // Mapeamento invertido: sens 100 → threshold ~200; sens 0 → threshold ~30000
+        return (int) (200 + (30000 - 200) * (1.0 - s / 100.0));
+    }
+
+    // ── Duração da gravação (segundos) ──────────────────────────────────────
+    public int getRecordDuration() {
+        return prefs.getInt(KEY_RECORD_DURATION, DEFAULT_RECORD_DURATION);
+    }
+    public void setRecordDuration(int seconds) {
+        prefs.edit().putInt(KEY_RECORD_DURATION, seconds).apply();
+    }
+
+    // ── URI do áudio periódico ──────────────────────────────────────────────
+    public String getPeriodicUri() {
+        return prefs.getString(KEY_PERIODIC_URI, "");
+    }
+    public void setPeriodicUri(String uri) {
+        prefs.edit().putString(KEY_PERIODIC_URI, uri).apply();
+    }
+
+    // ── Intervalo periódico (minutos) ───────────────────────────────────────
+    public int getPeriodicInterval() {
+        return prefs.getInt(KEY_PERIODIC_INTERVAL, DEFAULT_PERIODIC_INTERVAL);
+    }
+    public void setPeriodicInterval(int minutes) {
+        prefs.edit().putInt(KEY_PERIODIC_INTERVAL, minutes).apply();
+    }
+
+    // ── Flags de ativação ───────────────────────────────────────────────────
+    public boolean isPeriodicEnabled() {
+        return prefs.getBoolean(KEY_PERIODIC_ENABLED, false);
+    }
+    public void setPeriodicEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_PERIODIC_ENABLED, enabled).apply();
+    }
+
+    public boolean isMonitorEnabled() {
+        return prefs.getBoolean(KEY_MONITOR_ENABLED, true);
+    }
+    public void setMonitorEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_MONITOR_ENABLED, enabled).apply();
+    }
+
+    // ── Estado do serviço (para restaurar UI após morte do processo) ─────────
+    public boolean isServiceRunning() {
+        return prefs.getBoolean(KEY_SERVICE_RUNNING, false);
+    }
+    public void setServiceRunning(boolean running) {
+        prefs.edit().putBoolean(KEY_SERVICE_RUNNING, running).apply();
+    }
+
+    // ── Dias para expurgo automático de histórico e áudios ─────────────────
+    public int getPurgeDays() {
+        return prefs.getInt(KEY_PURGE_DAYS, DEFAULT_PURGE_DAYS);
+    }
+    public void setPurgeDays(int days) {
+        prefs.edit().putInt(KEY_PURGE_DAYS, days).apply();
+    }
+
+    // ── Silêncio para corte rápido e retransmissão (ms) ──────────────────────
+    public int getSilenceTimeoutMs() {
+        return prefs.getInt(KEY_SILENCE_TIMEOUT_MS, DEFAULT_SILENCE_TIMEOUT_MS);
+    }
+    public void setSilenceTimeoutMs(int ms) {
+        prefs.edit().putInt(KEY_SILENCE_TIMEOUT_MS, ms).apply();
+    }
+
+    // ── Normalização de Volume / Pico (para acionar VOX) ─────────────────────
+    public boolean isNormalizeAudio() {
+        return prefs.getBoolean(KEY_NORMALIZE_AUDIO, DEFAULT_NORMALIZE_AUDIO);
+    }
+    public void setNormalizeAudio(boolean normalize) {
+        prefs.edit().putBoolean(KEY_NORMALIZE_AUDIO, normalize).apply();
+    }
+
+    // ── Ganho / Boost de Saída (50% a 200%) ─────────────────────────────────
+    public int getOutputBoost() {
+        return prefs.getInt(KEY_OUTPUT_BOOST, DEFAULT_OUTPUT_BOOST);
+    }
+    public void setOutputBoost(int boostPercent) {
+        prefs.edit().putInt(KEY_OUTPUT_BOOST, boostPercent).apply();
+    }
+}
