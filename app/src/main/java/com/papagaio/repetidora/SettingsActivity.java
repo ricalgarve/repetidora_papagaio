@@ -176,8 +176,8 @@ public class SettingsActivity extends AppCompatActivity {
     private void updateSensitivityLabel(int value) {
         String desc;
         if      (value >= 80) desc = "Muito Alta — detecta até ruído leve";
-        else if (value >= 60) desc = "Alta — áudio baixo do rádio";
-        else if (value >= 40) desc = "Média (Padrão) — modulação ideal";
+        else if (value >= 60) desc = "Alta (Padrão Recomendado) — modulação ideal rádio";
+        else if (value >= 40) desc = "Média — voz firme";
         else if (value >= 20) desc = "Baixa — precisa de áudio bem alto";
         else                  desc = "Muito Baixa — apenas som muito forte";
         tvSensitivityValue.setText(value + "%  —  " + desc);

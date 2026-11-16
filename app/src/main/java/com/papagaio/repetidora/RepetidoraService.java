@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -55,10 +56,46 @@ public class RepetidoraService extends Service {
     private MediaPlayer     playbackPlayer;
     private PowerManager.WakeLock wakeLock;
 
+    private final SharedPreferences.OnSharedPreferenceChangeListener prefListener = (prefs, key) -> {
+        if (key == null) return;
+        if (SettingsManager.KEY_SENSITIVITY.equals(key)) {
+            if (audioMonitor != null) {
+                audioMonitor.setThreshold(settings.getAmplitudeThreshold());
+            }
+        } else if (SettingsManager.KEY_SILENCE_TIMEOUT_MS.equals(key)) {
+            if (audioMonitor != null) {
+                audioMonitor.setSilenceTimeoutMs(settings.getSilenceTimeoutMs());
+            }
+        } else if (SettingsManager.KEY_RECORD_DURATION.equals(key)) {
+            if (audioMonitor != null) {
+                audioMonitor.setMaxDurationSeconds(settings.getRecordDuration());
+            }
+        } else if (SettingsManager.KEY_MONITOR_ENABLED.equals(key)) {
+            boolean enabled = settings.isMonitorEnabled();
+            if (enabled && audioMonitor == null) {
+                startMonitor();
+            } else if (!enabled && audioMonitor != null) {
+                audioMonitor.stop();
+                audioMonitor = null;
+            }
+            updateNotification(buildStatusText(settings.isMonitorEnabled(), settings.isPeriodicEnabled()));
+        } else if (SettingsManager.KEY_PERIODIC_ENABLED.equals(key) || SettingsManager.KEY_PERIODIC_INTERVAL.equals(key)) {
+            if (periodicPlayer != null) {
+                periodicPlayer.stop();
+                periodicPlayer = null;
+            }
+            if (settings.isPeriodicEnabled()) {
+                startPeriodic();
+            }
+            updateNotification(buildStatusText(settings.isMonitorEnabled(), settings.isPeriodicEnabled()));
+        }
+    };
+
     @Override
     public void onCreate() {
         super.onCreate();
         settings = new SettingsManager(this);
+        settings.getSharedPreferences().registerOnSharedPreferenceChangeListener(prefListener);
         historyDb = HistoryDatabase.getInstance(this);
         createNotificationChannel();
 
@@ -107,6 +144,9 @@ public class RepetidoraService extends Service {
     @Override
     public void onDestroy() {
         teardown();
+        try {
+            settings.getSharedPreferences().unregisterOnSharedPreferenceChangeListener(prefListener);
+        } catch (Exception ignored) {}
         settings.setServiceRunning(false);
         super.onDestroy();
         Log.d(TAG, "Serviço destruído");

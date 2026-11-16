@@ -31,9 +31,9 @@ public class AudioMonitor implements Runnable {
         void onRecordingDiscarded(); // se foi apenas um estalo (< 350ms)
     }
 
-    private final int threshold;
-    private final int silenceTimeoutMs;
-    private final int maxDurationSeconds;
+    private volatile int threshold;
+    private volatile int silenceTimeoutMs;
+    private volatile int maxDurationSeconds;
     private final AudioEngineListener listener;
 
     private volatile boolean running = false;
@@ -54,6 +54,20 @@ public class AudioMonitor implements Runnable {
         this.silenceTimeoutMs = Math.max(200, silenceTimeoutMs);
         this.maxDurationSeconds = Math.max(5, maxDurationSeconds);
         this.listener = listener;
+    }
+
+    public void setThreshold(int threshold) {
+        this.threshold = threshold;
+        Log.d(TAG, "Threshold atualizado para: " + threshold);
+    }
+
+    public void setSilenceTimeoutMs(int silenceTimeoutMs) {
+        this.silenceTimeoutMs = Math.max(200, silenceTimeoutMs);
+        Log.d(TAG, "Silence timeout atualizado para: " + this.silenceTimeoutMs + "ms");
+    }
+
+    public void setMaxDurationSeconds(int maxDurationSeconds) {
+        this.maxDurationSeconds = Math.max(5, maxDurationSeconds);
     }
 
     public void start() {
@@ -92,17 +106,34 @@ public class AudioMonitor implements Runnable {
         int bufSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL, ENCODING);
         if (bufSize <= 0) bufSize = 2048;
 
-        int source = MediaRecorder.AudioSource.VOICE_RECOGNITION;
-        audioRecord = new AudioRecord(source, SAMPLE_RATE, CHANNEL, ENCODING, bufSize * 2);
+        // MIC padrão é a fonte mais limpa e universal para áudio de rádio/fone sem corte de frequência DSP
+        int[] preferredSources = new int[]{
+            MediaRecorder.AudioSource.MIC,
+            MediaRecorder.AudioSource.VOICE_RECOGNITION,
+            MediaRecorder.AudioSource.DEFAULT
+        };
 
-        if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
-            audioRecord.release();
-            source = MediaRecorder.AudioSource.MIC;
-            audioRecord = new AudioRecord(source, SAMPLE_RATE, CHANNEL, ENCODING, bufSize * 2);
+        for (int src : preferredSources) {
+            try {
+                audioRecord = new AudioRecord(src, SAMPLE_RATE, CHANNEL, ENCODING, bufSize * 2);
+                if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
+                    Log.d(TAG, "AudioRecord inicializado com sucesso usando source=" + src);
+                    break;
+                } else {
+                    audioRecord.release();
+                    audioRecord = null;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Tentativa de source " + src + " falhou", e);
+                if (audioRecord != null) {
+                    try { audioRecord.release(); } catch (Exception ignored) {}
+                    audioRecord = null;
+                }
+            }
         }
 
-        if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
-            Log.e(TAG, "Falha ao inicializar AudioRecord");
+        if (audioRecord == null || audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "Falha crítica: Não foi possível inicializar AudioRecord em nenhum source.");
             running = false;
             return;
         }
@@ -110,11 +141,14 @@ public class AudioMonitor implements Runnable {
         audioRecord.startRecording();
         short[] shortBuffer = new short[bufSize / 2];
         byte[] byteBuffer = new byte[bufSize];
-        Log.d(TAG, "AudioRecord ativo na taxa de 16000 Hz Mono.");
+        Log.d(TAG, "AudioRecord ativo e gravando na taxa de 16000 Hz Mono.");
 
         while (running) {
             int shortsRead = audioRecord.read(shortBuffer, 0, shortBuffer.length);
-            if (shortsRead <= 0) continue;
+            if (shortsRead <= 0) {
+                try { Thread.sleep(20); } catch (InterruptedException ignored) {}
+                continue;
+            }
 
             // Converter para bytes (little-endian)
             for (int i = 0; i < shortsRead; i++) {

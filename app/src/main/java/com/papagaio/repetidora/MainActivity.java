@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.media.AudioManager;
@@ -71,22 +72,37 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (amplitude >= 0) {
-                // Amplitude 0-32768 normalizada para 0-100%
-                int pct = Math.min(100, amplitude * 100 / 32768);
+                // Escala perceptiva calibrada para áudio de voz e rádio (0 a ~8000 RMS)
+                int pct = 0;
+                if (amplitude > 50) {
+                    pct = (int) Math.min(100, Math.sqrt((double) amplitude / 8000.0) * 100.0);
+                }
                 progressBargraph.setProgress(pct);
 
                 int threshold = settings.getAmplitudeThreshold();
-                int thresholdPct = Math.min(100, threshold * 100 / 32768);
+                int thresholdPct = (int) Math.min(100, Math.sqrt((double) threshold / 8000.0) * 100.0);
 
                 if (amplitude > threshold) {
                     tvVoxTriggerIndicator.setText("● DISPARANDO VOX");
-                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#EF4444")); // Vermelho vivo
+                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#EF4444")); // Vermelho
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#EF4444")));
+                    }
+                } else if (pct > 50) {
+                    tvVoxTriggerIndicator.setText("● ESCUTA (RX)");
+                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#F59E0B")); // Âmbar
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#F59E0B")));
+                    }
                 } else {
                     tvVoxTriggerIndicator.setText("● ESCUTA (RX)");
                     tvVoxTriggerIndicator.setTextColor(Color.parseColor("#10B981")); // Verde
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#10B981")));
+                    }
                 }
 
-                tvBargraphDetails.setText("Sinal: " + pct + "% (RMS: " + amplitude + ") | Limiar: " + settings.getSensitivity() + "%");
+                tvBargraphDetails.setText("Sinal: " + pct + "% (RMS: " + amplitude + ") | Gatilho VOX: " + thresholdPct + "% (Sens: " + settings.getSensitivity() + "%)");
             }
         }
     };
@@ -212,8 +228,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateBargraphThresholdLabel() {
-        tvThresholdMarker.setText("▲ LIMIAR (" + settings.getSensitivity() + "%)");
-        tvBargraphDetails.setText("Sinal: 0% | Limiar VOX: " + settings.getSensitivity() + "%");
+        int threshold = settings.getAmplitudeThreshold();
+        int thresholdPct = (int) Math.min(100, Math.sqrt((double) threshold / 8000.0) * 100.0);
+        tvThresholdMarker.setText("▲ LIMIAR (" + thresholdPct + "%)");
+        tvBargraphDetails.setText("Sinal: 0% | Gatilho VOX: " + thresholdPct + "% (Sens: " + settings.getSensitivity() + "%)");
     }
 
     private void setupListeners() {
@@ -268,9 +286,12 @@ public class MainActivity extends AppCompatActivity {
         updateStartStopButton();
         tvStatus.setText("Parado");
         progressBargraph.setProgress(0);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#10B981")));
+        }
         tvVoxTriggerIndicator.setText("● AGUARDANDO");
         tvVoxTriggerIndicator.setTextColor(Color.parseColor("#94A3B8"));
-        tvBargraphDetails.setText("Sinal: 0% | Limiar VOX: " + settings.getSensitivity() + "%");
+        updateBargraphThresholdLabel();
     }
 
     private void updateStartStopButton() {

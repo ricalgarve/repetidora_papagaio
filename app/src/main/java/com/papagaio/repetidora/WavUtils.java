@@ -21,13 +21,13 @@ public class WavUtils {
         int numSamples = length / 2;
         short[] samples = new short[numSamples];
 
-        short maxPeak = 0;
+        int maxPeak = 0;
         for (int i = 0; i < numSamples; i++) {
             int low = pcmData[i * 2] & 0xFF;
             int high = pcmData[i * 2 + 1];
             short sample = (short) ((high << 8) | low);
             samples[i] = sample;
-            short abs = (short) Math.abs(sample);
+            int abs = Math.abs((int) sample);
             if (abs > maxPeak) {
                 maxPeak = abs;
             }

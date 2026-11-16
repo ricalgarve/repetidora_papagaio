@@ -24,7 +24,7 @@ public class SettingsManager {
     public static final String KEY_OUTPUT_BOOST       = "output_boost";
 
     // Valores padrão
-    public static final int DEFAULT_SENSITIVITY          = 40;   // 0–100 %
+    public static final int DEFAULT_SENSITIVITY          = 60;   // 0–100 % (60% padrão calibrado para VOX)
     public static final int DEFAULT_RECORD_DURATION      = 30;   // segundos máximos de segurança
     public static final int DEFAULT_PERIODIC_INTERVAL    = 10;   // minutos
     public static final int DEFAULT_PURGE_DAYS           = 2;    // expurgo a cada 2 dias por padrão
@@ -39,6 +39,10 @@ public class SettingsManager {
                        .getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
     }
 
+    public SharedPreferences getSharedPreferences() {
+        return prefs;
+    }
+
     // ── Sensibilidade (0–100) ────────────────────────────────────────────────
     public int getSensitivity() {
         return prefs.getInt(KEY_SENSITIVITY, DEFAULT_SENSITIVITY);
@@ -48,14 +52,25 @@ public class SettingsManager {
     }
 
     /**
-     * Converte sensibilidade (0–100 %) em threshold de amplitude (0–32768).
-     * Sensibilidade alta → threshold baixo (aciona com sons fracos).
-     * Sensibilidade baixa → threshold alto (precisa de sons fortes).
+     * Converte sensibilidade (0–100 %) em threshold de amplitude RMS realista.
+     * Na escala 16-bit PCM do microfone Android:
+     * - Ruído ambiente: RMS 30 a 150
+     * - Voz suave / rádio baixo: RMS 400 a 800
+     * - Voz normal / rádio padrão: RMS 1000 a 2500
+     * - Grito / áudio alto: RMS 5000 a 10000+
+     *
+     * Mapeamento quadrático calibrado:
+     * - Sensibilidade 100%: threshold = 150 (super sensível)
+     * - Sensibilidade 80%:  threshold = 410 (alta sensibilidade)
+     * - Sensibilidade 60%:  threshold = 1190 (padrão recomendado rádio)
+     * - Sensibilidade 50%:  threshold = 1775
+     * - Sensibilidade 30%:  threshold = 3330 (ambientes com ruído)
+     * - Sensibilidade 0%:   threshold = 6650 (somente som muito forte)
      */
     public int getAmplitudeThreshold() {
         int s = getSensitivity();
-        // Mapeamento invertido: sens 100 → threshold ~200; sens 0 → threshold ~30000
-        return (int) (200 + (30000 - 200) * (1.0 - s / 100.0));
+        double factor = (100.0 - s) / 100.0;
+        return (int) (150 + 6500 * factor * factor);
     }
 
     // ── Duração da gravação (segundos) ──────────────────────────────────────
