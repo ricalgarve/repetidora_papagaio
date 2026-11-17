@@ -60,10 +60,28 @@ public class SettingsActivity extends AppCompatActivity {
 
         setupSensitivity();
         setupSilenceTimeout();
+        setupAntiLoop();
         setupNormalizationAndBoost();
         setupMaxDuration();
         setupPeriodicInterval();
         setupPurgeDays();
+        setupKeepScreenOn();
+    }
+
+    private void setupAntiLoop() {
+        Switch switchAntiLoop = findViewById(R.id.switch_anti_loop);
+        switchAntiLoop.setChecked(settings.isAntiLoopEnabled());
+        switchAntiLoop.setOnCheckedChangeListener((v, isChecked) -> {
+            settings.setAntiLoopEnabled(isChecked);
+        });
+    }
+
+    private void setupKeepScreenOn() {
+        Switch switchKeepScreenOn = findViewById(R.id.switch_keep_screen_on);
+        switchKeepScreenOn.setChecked(settings.isKeepScreenOn());
+        switchKeepScreenOn.setOnCheckedChangeListener((v, isChecked) -> {
+            settings.setKeepScreenOn(isChecked);
+        });
     }
 
     private void setupSensitivity() {
@@ -205,7 +223,8 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void updateDurationLabel(int secs) {
-        tvDurationValue.setText(secs + " segundos");
+        String rec = (secs == 10) ? " (Padrão Recomendado)" : "";
+        tvDurationValue.setText(secs + " segundos" + rec);
     }
 
     private void updateIntervalLabel(int mins) {

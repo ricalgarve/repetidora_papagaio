@@ -9,7 +9,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioAttributes;
+import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.IBinder;
@@ -54,6 +56,8 @@ public class RepetidoraService extends Service {
     private AudioMonitor    audioMonitor;
     private PeriodicPlayer  periodicPlayer;
     private MediaPlayer     playbackPlayer;
+    private AudioTrack      activeAudioTrack;
+    private volatile boolean isPlayingTrack = false;
     private PowerManager.WakeLock wakeLock;
 
     private final SharedPreferences.OnSharedPreferenceChangeListener prefListener = (prefs, key) -> {
@@ -69,6 +73,10 @@ public class RepetidoraService extends Service {
         } else if (SettingsManager.KEY_RECORD_DURATION.equals(key)) {
             if (audioMonitor != null) {
                 audioMonitor.setMaxDurationSeconds(settings.getRecordDuration());
+            }
+        } else if (SettingsManager.KEY_ANTI_LOOP_ENABLED.equals(key)) {
+            if (audioMonitor != null) {
+                audioMonitor.setAntiLoopEnabled(settings.isAntiLoopEnabled());
             }
         } else if (SettingsManager.KEY_MONITOR_ENABLED.equals(key)) {
             boolean enabled = settings.isMonitorEnabled();
@@ -192,6 +200,16 @@ public class RepetidoraService extends Service {
     }
 
     private void stopPlaybackPlayer() {
+        isPlayingTrack = false;
+        if (activeAudioTrack != null) {
+            try {
+                if (activeAudioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
+                    activeAudioTrack.stop();
+                }
+                activeAudioTrack.release();
+            } catch (Exception ignored) {}
+            activeAudioTrack = null;
+        }
         if (playbackPlayer != null) {
             try {
                 if (playbackPlayer.isPlaying()) playbackPlayer.stop();
@@ -207,8 +225,9 @@ public class RepetidoraService extends Service {
         int threshold = settings.getAmplitudeThreshold();
         int silenceTimeoutMs = settings.getSilenceTimeoutMs();
         int maxDurationSec = settings.getRecordDuration();
+        boolean antiLoop = settings.isAntiLoopEnabled();
 
-        audioMonitor = new AudioMonitor(threshold, silenceTimeoutMs, maxDurationSec, new AudioMonitor.AudioEngineListener() {
+        audioMonitor = new AudioMonitor(threshold, silenceTimeoutMs, maxDurationSec, antiLoop, new AudioMonitor.AudioEngineListener() {
             @Override
             public void onAmplitudeUpdate(int amplitude) {
                 // Atualiza o bargraph na interface continuamente
@@ -276,68 +295,117 @@ public class RepetidoraService extends Service {
                     "Retransmitida (VOX)"
                 ));
 
-                // 3. Reproduzir imediatamente
-                playWavToRadio(wavFile.getAbsolutePath());
+                // 3. Reproduzir imediatamente sensibilizando o bargraph em tempo real
+                playPcmToRadioWithBargraph(processedPcm, sampleRate);
 
             } catch (Exception e) {
                 Log.e(TAG, "Falha ao processar e salvar áudio", e);
                 if (audioMonitor != null) audioMonitor.setPlaybackActive(false);
-                broadcastStatus("🎙 Monitorando som…", -1);
+                broadcastStatus("🎙 Monitorando som…", 0);
             }
         }, "ProcessAndPlay").start();
     }
 
-    private void playWavToRadio(String filePath) {
+    /**
+     * Reproduz o áudio PCM normalizado diretamente no rádio (AudioTrack)
+     * e alimenta o Bargraph da interface em tempo real a cada 50ms (Modulação TX).
+     */
+    private void playPcmToRadioWithBargraph(byte[] pcmData, int sampleRate) {
         try {
             stopPlaybackPlayer();
 
-            playbackPlayer = new MediaPlayer();
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                playbackPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build());
-            } else {
-                playbackPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            if (audioMonitor != null) {
+                audioMonitor.setPlaybackActive(true);
             }
 
-            playbackPlayer.setDataSource(filePath);
-            playbackPlayer.setVolume(1.0f, 1.0f); // Volume total do MediaPlayer
+            int channelConfig = AudioFormat.CHANNEL_OUT_MONO;
+            int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
+            int minBufSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat);
+            int bufferSize = Math.max(minBufSize, 4096);
 
-            playbackPlayer.setOnCompletionListener(mp -> {
-                Log.d(TAG, "Retransmissão concluída com sucesso.");
-                mp.release();
-                playbackPlayer = null;
-                if (audioMonitor != null) {
-                    audioMonitor.setPlaybackActive(false);
+            AudioTrack track;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                track = new AudioTrack(
+                    new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build(),
+                    new AudioFormat.Builder()
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(channelConfig)
+                        .setEncoding(audioFormat)
+                        .build(),
+                    bufferSize,
+                    AudioTrack.MODE_STREAM,
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                );
+            } else {
+                track = new AudioTrack(
+                    AudioManager.STREAM_MUSIC,
+                    sampleRate,
+                    channelConfig,
+                    audioFormat,
+                    bufferSize,
+                    AudioTrack.MODE_STREAM
+                );
+            }
+
+            activeAudioTrack = track;
+            isPlayingTrack = true;
+
+            track.play();
+            Log.d(TAG, "AudioTrack ativo. Retransmitindo áudio e modulando bargraph em tempo real.");
+
+            // Bloco de 50ms em 16kHz Mono 16-bit = 1600 bytes
+            int chunkSize = Math.max(320, (sampleRate * 2 * 50) / 1000);
+            int offset = 0;
+
+            while (offset < pcmData.length && isPlayingTrack) {
+                int length = Math.min(chunkSize, pcmData.length - offset);
+                track.write(pcmData, offset, length);
+
+                // Calcular amplitude deste trecho para alimentar o Bargraph da UI
+                int numShorts = length / 2;
+                long sum = 0;
+                for (int i = 0; i < numShorts; i++) {
+                    int low = pcmData[offset + i * 2] & 0xFF;
+                    int high = pcmData[offset + i * 2 + 1];
+                    short s = (short) ((high << 8) | low);
+                    sum += (long) s * s;
                 }
-                String msg = "🎙 Monitorando som…";
-                updateNotification(msg);
-                broadcastStatus(msg, -1);
-            });
+                int rms = (numShorts > 0) ? (int) Math.sqrt((double) sum / numShorts) : 0;
 
-            playbackPlayer.setOnErrorListener((mp, what, extra) -> {
-                Log.w(TAG, "Erro MediaPlayer retransmissão: " + what);
-                mp.release();
-                playbackPlayer = null;
-                if (audioMonitor != null) {
-                    audioMonitor.setPlaybackActive(false);
-                }
-                broadcastStatus("🎙 Monitorando som…", -1);
-                return true;
-            });
+                broadcastStatus(null, rms);
+                offset += length;
+            }
 
-            playbackPlayer.prepare();
-            playbackPlayer.start();
-            Log.d(TAG, "Reprodução iniciada imediatamente para abrir o VOX do rádio.");
+            // Aguarda esvaziamento do buffer de áudio
+            if (isPlayingTrack) {
+                try { Thread.sleep(120); } catch (InterruptedException ignored) {}
+            }
 
         } catch (Exception e) {
-            Log.e(TAG, "Erro ao iniciar reprodução no rádio", e);
+            Log.e(TAG, "Erro durante reprodução via AudioTrack", e);
+        } finally {
+            try {
+                if (activeAudioTrack != null) {
+                    if (activeAudioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
+                        activeAudioTrack.stop();
+                    }
+                    activeAudioTrack.release();
+                }
+            } catch (Exception ignored) {}
+            activeAudioTrack = null;
+            isPlayingTrack = false;
+
             if (audioMonitor != null) {
                 audioMonitor.setPlaybackActive(false);
             }
-            broadcastStatus("🎙 Monitorando som…", -1);
+
+            String msg = "🎙 Monitorando som…";
+            updateNotification(msg);
+            broadcastStatus(msg, 0);
+            Log.d(TAG, "Retransmissão finalizada com sucesso. Retornando para escuta.");
         }
     }
 

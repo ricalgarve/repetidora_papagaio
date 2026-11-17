@@ -22,15 +22,19 @@ public class SettingsManager {
     public static final String KEY_SILENCE_TIMEOUT_MS = "silence_timeout_ms";
     public static final String KEY_NORMALIZE_AUDIO    = "normalize_audio";
     public static final String KEY_OUTPUT_BOOST       = "output_boost";
+    public static final String KEY_KEEP_SCREEN_ON     = "keep_screen_on";
+    public static final String KEY_ANTI_LOOP_ENABLED  = "anti_loop_enabled";
 
     // Valores padrão
     public static final int DEFAULT_SENSITIVITY          = 60;   // 0–100 % (60% padrão calibrado para VOX)
-    public static final int DEFAULT_RECORD_DURATION      = 30;   // segundos máximos de segurança
+    public static final int DEFAULT_RECORD_DURATION      = 10;   // 10 segundos máximos de segurança padrão
     public static final int DEFAULT_PERIODIC_INTERVAL    = 10;   // minutos
     public static final int DEFAULT_PURGE_DAYS           = 2;    // expurgo a cada 2 dias por padrão
     public static final int DEFAULT_SILENCE_TIMEOUT_MS   = 800;  // ms de silêncio para cortar e retransmitir
     public static final boolean DEFAULT_NORMALIZE_AUDIO  = true; // normalização de pico ativada
     public static final int DEFAULT_OUTPUT_BOOST         = 120;  // 120% de ganho para acionar VOX do rádio
+    public static final boolean DEFAULT_KEEP_SCREEN_ON   = false;// Tela sempre ativa (desabilitado por padrão)
+    public static final boolean DEFAULT_ANTI_LOOP_ENABLED= false;// Anti-looping holdoff (desabilitado por padrão)
 
     private final SharedPreferences prefs;
 
@@ -150,5 +154,21 @@ public class SettingsManager {
     }
     public void setOutputBoost(int boostPercent) {
         prefs.edit().putInt(KEY_OUTPUT_BOOST, boostPercent).apply();
+    }
+
+    // ── Tela Sempre Ativa (Wake / Keep Screen On) ───────────────────────────
+    public boolean isKeepScreenOn() {
+        return prefs.getBoolean(KEY_KEEP_SCREEN_ON, DEFAULT_KEEP_SCREEN_ON);
+    }
+    public void setKeepScreenOn(boolean keepOn) {
+        prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, keepOn).apply();
+    }
+
+    // ── Proteção Anti-Looping (Holdoff PTT) ──────────────────────────────────
+    public boolean isAntiLoopEnabled() {
+        return prefs.getBoolean(KEY_ANTI_LOOP_ENABLED, DEFAULT_ANTI_LOOP_ENABLED);
+    }
+    public void setAntiLoopEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_ANTI_LOOP_ENABLED, enabled).apply();
     }
 }

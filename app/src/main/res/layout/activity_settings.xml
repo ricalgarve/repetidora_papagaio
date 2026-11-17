@@ -141,6 +141,73 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- Card: Proteção Anti-Looping (Holdoff PTT) -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔄  Proteção Anti-Looping (Holdoff PTT)"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Inibe o microfone após transmitir para não captar o próprio desarme do rádio"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_secondary"
+                            android:paddingTop="3dp"/>
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/switch_anti_loop"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="ℹ️ Como funciona: Bloqueia o microfone por 1,5s após a retransmissão e aguarda o squelch do rádio fechar antes de rearmar a escuta. Ative caso o rádio fique em loop infinito regravando o próprio chiado final."
+                    android:textSize="11sp"
+                    android:textColor="@color/text_secondary"
+                    android:lineSpacingExtra="2dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <!-- Card: Normalização de Volume & Boost para VOX -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -432,6 +499,52 @@
                         android:textColor="@color/text_secondary"
                         android:gravity="end"/>
                 </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Card: Manter Tela Sempre Ativa -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📱  Manter Tela Sempre Ativa"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Impede que a tela do celular apague enquanto o app estiver aberto (consome mais bateria)"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:paddingTop="3dp"/>
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_keep_screen_on"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 

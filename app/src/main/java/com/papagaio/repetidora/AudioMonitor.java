@@ -34,6 +34,7 @@ public class AudioMonitor implements Runnable {
     private volatile int threshold;
     private volatile int silenceTimeoutMs;
     private volatile int maxDurationSeconds;
+    private volatile boolean antiLoopEnabled;
     private final AudioEngineListener listener;
 
     private volatile boolean running = false;
@@ -41,18 +42,21 @@ public class AudioMonitor implements Runnable {
     private Thread monitorThread;
     private AudioRecord audioRecord;
 
-    private enum State { IDLE, RECORDING, PLAYING }
+    private enum State { IDLE, RECORDING, PLAYING, HOLDOFF }
     private volatile State state = State.IDLE;
+    private volatile long holdoffStartTime = 0;
+    private volatile long quietSinceTime = 0;
 
     private final ByteArrayOutputStream pcmBuffer = new ByteArrayOutputStream(64 * 1024);
     private long recordingStartTime = 0;
     private long lastSoundDetectedTime = 0;
     private long lastAmplitudeBroadcastTime = 0;
 
-    public AudioMonitor(int threshold, int silenceTimeoutMs, int maxDurationSeconds, AudioEngineListener listener) {
+    public AudioMonitor(int threshold, int silenceTimeoutMs, int maxDurationSeconds, boolean antiLoopEnabled, AudioEngineListener listener) {
         this.threshold = threshold;
         this.silenceTimeoutMs = Math.max(200, silenceTimeoutMs);
         this.maxDurationSeconds = Math.max(5, maxDurationSeconds);
+        this.antiLoopEnabled = antiLoopEnabled;
         this.listener = listener;
     }
 
@@ -70,13 +74,18 @@ public class AudioMonitor implements Runnable {
         this.maxDurationSeconds = Math.max(5, maxDurationSeconds);
     }
 
+    public void setAntiLoopEnabled(boolean enabled) {
+        this.antiLoopEnabled = enabled;
+        Log.d(TAG, "Anti-looping atualizado: " + (enabled ? "ATIVADO" : "DESATIVADO"));
+    }
+
     public void start() {
         if (running) return;
         running = true;
         monitorThread = new Thread(this, "SmartAudioEngine");
         monitorThread.setPriority(Thread.MAX_PRIORITY);
         monitorThread.start();
-        Log.d(TAG, "Iniciado. Threshold=" + threshold + ", Silêncio=" + silenceTimeoutMs + "ms");
+        Log.d(TAG, "Iniciado. Threshold=" + threshold + ", Silêncio=" + silenceTimeoutMs + "ms, AntiLoop=" + antiLoopEnabled);
     }
 
     public void stop() {
@@ -93,11 +102,22 @@ public class AudioMonitor implements Runnable {
         this.playbackActive = active;
         if (active) {
             state = State.PLAYING;
+            holdoffStartTime = 0;
+            quietSinceTime = 0;
         } else {
-            // Pequeno atraso para não captar cauda da própria transmissão
-            try { Thread.sleep(300); } catch (InterruptedException ignored) {}
-            pcmBuffer.reset();
-            state = State.IDLE;
+            if (antiLoopEnabled) {
+                // Entra no estado de HOLDOFF (bloqueio anti-looping pós-transmissão)
+                holdoffStartTime = System.currentTimeMillis();
+                quietSinceTime = 0;
+                pcmBuffer.reset();
+                state = State.HOLDOFF;
+                Log.d(TAG, "Playback finalizado. Entrando em HOLDOFF anti-looping.");
+            } else {
+                // Comportamento padrão direto
+                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+                pcmBuffer.reset();
+                state = State.IDLE;
+            }
         }
     }
 
@@ -172,6 +192,35 @@ public class AudioMonitor implements Runnable {
                 continue;
             }
 
+            if (antiLoopEnabled && state == State.HOLDOFF) {
+                // Bloqueio Anti-Looping pós-transmissão opcional:
+                // 1. Aguarda no mínimo 1500ms para que o rádio libere o PTT e a cauda de squelch se encerre.
+                // 2. Após 1500ms, exige que o sinal fique abaixo do limiar (silêncio) por 300ms contínuos antes de rearmar.
+                long elapsed = now - holdoffStartTime;
+                if (elapsed >= 1500) {
+                    if (amplitude < threshold) {
+                        if (quietSinceTime == 0) {
+                            quietSinceTime = now;
+                        } else if (now - quietSinceTime >= 300) {
+                            // Canal 100% limpo, sem ruído de corte de PTT ou squelch. Rearmar IDLE!
+                            pcmBuffer.reset();
+                            state = State.IDLE;
+                            Log.d(TAG, "Canal livre e limpo após " + elapsed + "ms. Repetidora rearmada para ESCUTA.");
+                        }
+                    } else {
+                        // Squelch ou ruído ainda presente, reinicia contagem de silêncio
+                        quietSinceTime = 0;
+                        if (elapsed >= 4000) {
+                            // Timeout máximo de segurança (4s)
+                            pcmBuffer.reset();
+                            state = State.IDLE;
+                            Log.w(TAG, "Holdoff atingiu timeout de segurança (4s). Rearmando.");
+                        }
+                    }
+                }
+                continue;
+            }
+
             if (state == State.IDLE) {
                 if (amplitude > threshold) {
                     state = State.RECORDING;
@@ -199,6 +248,9 @@ public class AudioMonitor implements Runnable {
                 if (stoppedBySilence || stoppedByMaxTime) {
                     Log.d(TAG, "Fim da transmissão! Motivo: " + (stoppedBySilence ? "Silêncio (" + silenceDurationMs + "ms)" : "Tempo Máximo"));
                     state = State.PLAYING;
+                    if (antiLoopEnabled) {
+                        playbackActive = true;
+                    }
 
                     if (recordedDurationMs < 350) {
                         // Ruído muito curto descartado
@@ -206,8 +258,26 @@ public class AudioMonitor implements Runnable {
                         state = State.IDLE;
                         if (listener != null) listener.onRecordingDiscarded();
                     } else {
-                        byte[] finalData = pcmBuffer.toByteArray();
+                        byte[] allData = pcmBuffer.toByteArray();
                         pcmBuffer.reset();
+
+                        byte[] finalData = allData;
+                        if (antiLoopEnabled && stoppedBySilence && silenceDurationMs > 100) {
+                            // Se anti-loop estiver ativo, corta a cauda de ruído gravada durante a espera
+                            long trimMs = silenceDurationMs - 80;
+                            int bytesToTrim = (int) (trimMs * (SAMPLE_RATE * 2 / 1000));
+                            int newLength = allData.length - bytesToTrim;
+                            if (newLength % 2 != 0) newLength--;
+                            int minBytes = (int) (350 * (SAMPLE_RATE * 2 / 1000));
+                            if (newLength >= minBytes && newLength < allData.length) {
+                                finalData = new byte[newLength];
+                                System.arraycopy(allData, 0, finalData, 0, newLength);
+                                Log.d(TAG, "Cauda de ruído cortada: " + trimMs + "ms descartados.");
+                            }
+                            applyFadeIn(finalData, SAMPLE_RATE, 15);
+                            applyFadeOut(finalData, SAMPLE_RATE, 30);
+                        }
+
                         if (listener != null) {
                             listener.onRecordingFinished(finalData, SAMPLE_RATE);
                         }
@@ -217,6 +287,48 @@ public class AudioMonitor implements Runnable {
         }
 
         releaseRecord();
+    }
+
+    private void applyFadeIn(byte[] pcmData, int sampleRate, int fadeMs) {
+        if (pcmData == null) return;
+        int fadeSamples = (sampleRate * fadeMs) / 1000;
+        int totalSamples = pcmData.length / 2;
+        if (totalSamples < fadeSamples) fadeSamples = totalSamples;
+
+        for (int i = 0; i < fadeSamples; i++) {
+            int byteIndex = i * 2;
+            int low = pcmData[byteIndex] & 0xFF;
+            int high = pcmData[byteIndex + 1];
+            short sample = (short) ((high << 8) | low);
+
+            float factor = (float) i / (float) fadeSamples;
+            short faded = (short) Math.round(sample * factor);
+
+            pcmData[byteIndex] = (byte) (faded & 0xFF);
+            pcmData[byteIndex + 1] = (byte) ((faded >> 8) & 0xFF);
+        }
+    }
+
+    private void applyFadeOut(byte[] pcmData, int sampleRate, int fadeMs) {
+        if (pcmData == null) return;
+        int fadeSamples = (sampleRate * fadeMs) / 1000;
+        int totalSamples = pcmData.length / 2;
+        if (totalSamples < fadeSamples) fadeSamples = totalSamples;
+        int startSample = totalSamples - fadeSamples;
+
+        for (int i = 0; i < fadeSamples; i++) {
+            int sampleIndex = startSample + i;
+            int byteIndex = sampleIndex * 2;
+            int low = pcmData[byteIndex] & 0xFF;
+            int high = pcmData[byteIndex + 1];
+            short sample = (short) ((high << 8) | low);
+
+            float factor = (float) (fadeSamples - i) / (float) fadeSamples;
+            short faded = (short) Math.round(sample * factor);
+
+            pcmData[byteIndex] = (byte) (faded & 0xFF);
+            pcmData[byteIndex + 1] = (byte) ((faded >> 8) & 0xFF);
+        }
     }
 
     private int calculateRMS(short[] buffer, int count) {

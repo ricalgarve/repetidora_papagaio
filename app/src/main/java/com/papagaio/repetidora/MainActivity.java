@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
@@ -82,27 +83,39 @@ public class MainActivity extends AppCompatActivity {
                 int threshold = settings.getAmplitudeThreshold();
                 int thresholdPct = (int) Math.min(100, Math.sqrt((double) threshold / 8000.0) * 100.0);
 
-                if (amplitude > threshold) {
+                boolean isTransmitting = (tvStatus.getText() != null) &&
+                    (tvStatus.getText().toString().contains("Retransmitindo") || 
+                     tvStatus.getText().toString().contains("Transmitindo"));
+
+                if (isTransmitting) {
+                    tvVoxTriggerIndicator.setText("● TRANSMITINDO (TX)");
+                    tvVoxTriggerIndicator.setTextColor(Color.parseColor("#2563EB")); // Azul
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#2563EB")));
+                    }
+                    tvBargraphDetails.setText("Modulação TX: " + pct + "% (RMS: " + amplitude + ") | Rádio no Ar");
+                } else if (amplitude > threshold) {
                     tvVoxTriggerIndicator.setText("● DISPARANDO VOX");
                     tvVoxTriggerIndicator.setTextColor(Color.parseColor("#DC2626")); // Vermelho
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#DC2626")));
                     }
+                    tvBargraphDetails.setText("Sinal: " + pct + "% (RMS: " + amplitude + ") | Gatilho VOX: " + thresholdPct + "% (Sens: " + settings.getSensitivity() + "%)");
                 } else if (pct > 50) {
                     tvVoxTriggerIndicator.setText("● ESCUTA (RX)");
                     tvVoxTriggerIndicator.setTextColor(Color.parseColor("#D97706")); // Âmbar
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#D97706")));
                     }
+                    tvBargraphDetails.setText("Sinal: " + pct + "% (RMS: " + amplitude + ") | Gatilho VOX: " + thresholdPct + "% (Sens: " + settings.getSensitivity() + "%)");
                 } else {
                     tvVoxTriggerIndicator.setText("● ESCUTA (RX)");
                     tvVoxTriggerIndicator.setTextColor(Color.parseColor("#16A34A")); // Verde
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         progressBargraph.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#16A34A")));
                     }
+                    tvBargraphDetails.setText("Sinal: " + pct + "% (RMS: " + amplitude + ") | Gatilho VOX: " + thresholdPct + "% (Sens: " + settings.getSensitivity() + "%)");
                 }
-
-                tvBargraphDetails.setText("Sinal: " + pct + "% (RMS: " + amplitude + ") | Gatilho VOX: " + thresholdPct + "% (Sens: " + settings.getSensitivity() + "%)");
             }
         }
     };
@@ -135,11 +148,13 @@ public class MainActivity extends AppCompatActivity {
         setupVolumeControl();
         restoreUiState();
         setupListeners();
+        applyKeepScreenOn();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        applyKeepScreenOn();
         IntentFilter filter = new IntentFilter(RepetidoraService.ACTION_STATUS_UPDATE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(statusReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
@@ -363,5 +378,13 @@ public class MainActivity extends AppCompatActivity {
             return path.substring(path.lastIndexOf('/') + 1);
         }
         return null;
+    }
+
+    private void applyKeepScreenOn() {
+        if (settings != null && settings.isKeepScreenOn()) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
     }
 }
