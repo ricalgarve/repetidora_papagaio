@@ -200,11 +200,21 @@ public class MainActivity extends AppCompatActivity {
     private void setupVolumeControl() {
         if (audioManager == null) return;
         int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+
+        // Se for primeira execução após instalação, inicializa volume em 60%
+        if (!settings.isVolumeInitialized()) {
+            int targetVol = (int) Math.round(maxVol * 0.60);
+            try {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0);
+            } catch (Exception ignored) {}
+            settings.setVolumeInitialized(true);
+        }
+
         int curVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
 
         seekAppVolume.setMax(maxVol);
         seekAppVolume.setProgress(curVol);
-        int pct = (maxVol > 0) ? (curVol * 100 / maxVol) : 100;
+        int pct = (maxVol > 0) ? (curVol * 100 / maxVol) : 60;
         tvVolumeValue.setText(pct + "%");
 
         seekAppVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {

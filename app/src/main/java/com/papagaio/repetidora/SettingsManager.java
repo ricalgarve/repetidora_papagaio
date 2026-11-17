@@ -24,13 +24,14 @@ public class SettingsManager {
     public static final String KEY_OUTPUT_BOOST       = "output_boost";
     public static final String KEY_KEEP_SCREEN_ON     = "keep_screen_on";
     public static final String KEY_ANTI_LOOP_ENABLED  = "anti_loop_enabled";
+    public static final String KEY_VOLUME_INITIALIZED  = "volume_initialized";
 
     // Valores padrão
     public static final int DEFAULT_SENSITIVITY          = 60;   // 0–100 % (60% padrão calibrado para VOX)
     public static final int DEFAULT_RECORD_DURATION      = 10;   // 10 segundos máximos de segurança padrão
     public static final int DEFAULT_PERIODIC_INTERVAL    = 10;   // minutos
     public static final int DEFAULT_PURGE_DAYS           = 2;    // expurgo a cada 2 dias por padrão
-    public static final int DEFAULT_SILENCE_TIMEOUT_MS   = 800;  // ms de silêncio para cortar e retransmitir
+    public static final int DEFAULT_SILENCE_TIMEOUT_MS   = 1200; // ms de silêncio para cortar e retransmitir (1200ms padrão)
     public static final boolean DEFAULT_NORMALIZE_AUDIO  = true; // normalização de pico ativada
     public static final int DEFAULT_OUTPUT_BOOST         = 120;  // 120% de ganho para acionar VOX do rádio
     public static final boolean DEFAULT_KEEP_SCREEN_ON   = false;// Tela sempre ativa (desabilitado por padrão)
@@ -170,5 +171,13 @@ public class SettingsManager {
     }
     public void setAntiLoopEnabled(boolean enabled) {
         prefs.edit().putBoolean(KEY_ANTI_LOOP_ENABLED, enabled).apply();
+    }
+
+    // ── Volume Inicializado (60% no primeiro boot) ───────────────────────────
+    public boolean isVolumeInitialized() {
+        return prefs.getBoolean(KEY_VOLUME_INITIALIZED, false);
+    }
+    public void setVolumeInitialized(boolean initialized) {
+        prefs.edit().putBoolean(KEY_VOLUME_INITIALIZED, initialized).apply();
     }
 }

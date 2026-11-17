@@ -202,13 +202,13 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void updateSilenceLabel(int ms) {
-        String rec = (ms == 800) ? " (Recomendado para Rádio)" : "";
+        String rec = (ms == 1200) ? " (Padrão Recomendado para Rádio)" : "";
         if (ms < 500) {
             tvSilenceValue.setText(ms + " ms — Ultra Rápido (quase sem pausa)" + rec);
         } else if (ms <= 1200) {
             tvSilenceValue.setText(ms + " ms — Rápido & Fluido" + rec);
         } else {
-            tvSilenceValue.setText(ms + " ms — Pausa mais longa");
+            tvSilenceValue.setText(ms + " ms — Pausa mais longa" + rec);
         }
     }
 
